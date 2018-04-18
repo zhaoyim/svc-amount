@@ -34,6 +34,26 @@ type DataFoundryClient struct {
 	token       atomic.Value
 }
 
+type BackingService struct {
+	unversioned.TypeMeta `json:",inline"`
+	Spec                 BackingServiceSpec `json:"spec,omitempty" description:"spec defines the behavior of the BackingService"`
+}
+
+type BackingServiceSpec struct {
+	Name                       string `json:"name, omitempty"`
+	BackingServiceSpecMetadata `json:"metadata, omitempty"`
+}
+
+type BackingServiceSpecMetadata struct {
+	DisplayName         string `json:"displayName, omitempty"`
+	DocumentationUrl    string `json:"documentationUrl, omitempty"`
+	ImageUrl            string `json:"imageUrl, omitempty"`
+	LongDescription     string `json:"longDescription, omitempty"`
+	ProviderDisplayName string `json:"providerDisplayName, omitempty"`
+	SupportUrl          string `json:"supportUrl, omitempty"`
+	Type                string `json:"type, omitempty"`
+}
+
 // BackingServiceInstance describe a BackingServiceInstance
 type BackingServiceInstance struct {
 	unversioned.TypeMeta `json:",inline"`
@@ -145,6 +165,14 @@ func (c *DataFoundryClient) GetService(ns, name string) (*kapi.Service, error) {
 	uri := "/namespaces/" + ns + "/services/" + name
 	svc := new(kapi.Service)
 	err := c.KGet(uri, svc)
+	clog.Trace(svc)
+	return svc, err
+}
+
+func (c *DataFoundryClient) GetBackingServices(ns, name string) (*BackingService, error) {
+	uri := "/namespaces/" + ns + "/backingservices/" + name
+	svc := new(BackingService)
+	err := c.OGet(uri, svc)
 	clog.Trace(svc)
 	return svc, err
 }

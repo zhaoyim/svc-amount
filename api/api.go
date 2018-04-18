@@ -59,7 +59,7 @@ func findDriver(service string) (*Agent, error) {
 	for driver, agent := range drivers {
 		for _, svc := range agent.services {
 			if strings.ToLower(svc) == strings.ToLower(service) {
-				return NewAgent(svc, driver)
+				return NewAgent(service, driver)
 			}
 		}
 	}

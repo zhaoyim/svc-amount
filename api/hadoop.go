@@ -21,6 +21,7 @@ type Hadoop struct {
 }
 
 var hadoopBaseURL string
+var servicesStr string
 
 func (h *Hadoop) UsageAmount(svc string, bsi *BackingServiceInstance, req *http.Request) (*svcAmountList, error) {
 	// uri := fmt.Sprintf("%s/%s/%s", h.BaseURL, svc, bsi.Spec.InstanceID)
@@ -53,7 +54,12 @@ func (h *Hadoop) getAmountFromRemote(uri string, r *http.Request) (*svcAmountLis
 func (h *Hadoop) GetRequestURI(svc string, bsi *BackingServiceInstance) (string, error) {
 	var remote RemoteURI
 
-	switch svc {
+	oc := DFClient()
+	svc1, err1 := oc.GetBackingServices("openshift", svc)
+	clog.Trace(err1)
+	svcType := strings.ToLower(svc1.Spec.BackingServiceSpecMetadata.Type)
+
+	switch svcType {
 	case "spark", "mapreduce":
 		// on async mode we need to bind instance first.
 
@@ -66,17 +72,17 @@ func (h *Hadoop) GetRequestURI(svc string, bsi *BackingServiceInstance) (string,
 		// if remote == nil {
 		// 	return "", fmt.Errorf("%s %s is not bound yet", svc, bsi.Name)
 		// }
-		remote = &yarnQueue{cred: bsi.Spec.Creds, svc: svc}
+		remote = &yarnQueue{cred: bsi.Spec.Creds, svc: svc, svcType: svcType}
+	case "hdfs":
+		remote = &hdfsPath{cred: bsi.Spec.Creds, svc: svc, svcType: svcType}
+	case "hive":
+		remote = &hiveDB{cred: bsi.Spec.Creds, svc: svc, svcType: svcType}
+	case "hbase":
+		remote = &hbaseNS{cred: bsi.Spec.Creds, svc: svc, svcType: svcType}
+	case "kafka":
+		remote = &kafkaTopic{cred: bsi.Spec.Creds, svc: svc, svcType: svcType}
 	case "mongodb", "greenplum":
 		remote = &dbName{cred: bsi.Spec.Creds, svc: svc}
-	case "hdfs":
-		remote = &hdfsPath{cred: bsi.Spec.Creds, svc: svc}
-	case "hive":
-		remote = &hiveDB{cred: bsi.Spec.Creds, svc: svc}
-	case "hbase":
-		remote = &hbaseNS{cred: bsi.Spec.Creds, svc: svc}
-	case "kafka":
-		remote = &kafkaTopic{cred: bsi.Spec.Creds, svc: svc}
 	default:
 		return "", fmt.Errorf("unknown service '%v' or not supported", svc)
 	}
@@ -85,32 +91,35 @@ func (h *Hadoop) GetRequestURI(svc string, bsi *BackingServiceInstance) (string,
 }
 
 type yarnQueue struct {
-	cred map[string]string
-	svc  string
+	cred    map[string]string
+	svc     string
+	svcType string
 }
 
 // since queue is start with root., we remove root. prefix by using queue[5:]
 
 func (yarn *yarnQueue) URI() (uri string, err error) {
-	queue, ok := yarn.cred["Yarn Queue"]
+	queue, ok := yarn.cred["Yarn_Queue"]
 	if !ok {
-		return "", fmt.Errorf("Yarn Queue value is empty.")
+		return "", fmt.Errorf("Yarn_Queue value is empty.")
 	}
-	uri = fmt.Sprintf("/%s/%s", yarn.svc, queue[5:])
+
+	uri = fmt.Sprintf("/%s/%s?service=%s", yarn.svcType, queue[5:], strings.ToLower(yarn.svc))
 	return
 }
 
 type hdfsPath struct {
-	cred map[string]string
-	svc  string
+	cred    map[string]string
+	svc     string
+	svcType string
 }
 
 func (hdfs *hdfsPath) URI() (uri string, err error) {
-	path, ok := hdfs.cred["HDFS Path"]
+	path, ok := hdfs.cred["HDFS_Path"]
 	if !ok {
-		return "", fmt.Errorf("HDFS Path value is empty")
+		return "", fmt.Errorf("HDFS_Path value is empty")
 	}
-	uri = fmt.Sprintf("/%s?path=%s", hdfs.svc, path)
+	uri = fmt.Sprintf("/%s?service=%s&path=%s", hdfs.svcType, strings.ToLower(hdfs.svc), path)
 	return uri, nil
 }
 
@@ -129,47 +138,43 @@ func (db *dbName) URI() (uri string, err error) {
 }
 
 type hiveDB struct {
-	cred map[string]string
-	svc  string
+	cred    map[string]string
+	svc     string
+	svcType string
 }
 
 func (hive *hiveDB) URI() (uri string, err error) {
-	credStr, ok := hive.cred["Hive database"]
+	hivedb, ok := hive.cred["Hive_Database"]
+
 	if !ok {
-		return "", fmt.Errorf("%v Hive database value is empty", hive.svc)
+		return "", fmt.Errorf("%v Hive_Database value is empty", hive.svc)
 	}
 
-	hivedb := strings.Split(credStr, ":")
-	if len(hivedb) != 2 {
-		return "", fmt.Errorf("Hive database '%v' is invalid", credStr)
-	}
-
-	db, queue := hivedb[0], hivedb[1]
-
-	// remove root. prefix
-	uri = fmt.Sprintf("/%s/%s?queue=%s", hive.svc, db, queue[5:])
+	uri = fmt.Sprintf("/%s/%s?service=%s", hive.svcType, hivedb, strings.ToLower(hive.svc))
 
 	return
 }
 
 type hbaseNS struct {
-	cred map[string]string
-	svc  string
+	cred    map[string]string
+	svc     string
+	svcType string
 }
 
 func (hbase *hbaseNS) URI() (uri string, err error) {
-	ns, ok := hbase.cred["HBase NameSpace"]
+	ns, ok := hbase.cred["HBase_NameSpace"]
 	if !ok {
-		return "", fmt.Errorf("%v namespace is empty", hbase.svc)
+		return "", fmt.Errorf("%v HBase_NameSpace is empty", hbase.svc)
 	}
 
-	uri = fmt.Sprintf("/%s/%s", hbase.svc, ns)
+	uri = fmt.Sprintf("/%s/%s?service=%s", hbase.svcType, ns, strings.ToLower(hbase.svc))
 	return uri, nil
 }
 
 type kafkaTopic struct {
-	cred map[string]string
-	svc  string
+	cred    map[string]string
+	svc     string
+	svcType string
 }
 
 func (kafka *kafkaTopic) URI() (uri string, err error) {
@@ -178,7 +183,7 @@ func (kafka *kafkaTopic) URI() (uri string, err error) {
 		return "", fmt.Errorf("%v topic is empty", kafka.svc)
 	}
 
-	uri = fmt.Sprintf("/%s/%s", kafka.svc, topic)
+	uri = fmt.Sprintf("/%s/%s?service=%s", kafka.svcType, topic, strings.ToLower(kafka.svc))
 	return uri, nil
 }
 
@@ -191,7 +196,8 @@ func init() {
 	hadoopBaseURL = httpsAddr(hadoopBaseURL)
 	clog.Debug("hadoop amount base url:", hadoopBaseURL)
 
-	services := []string{"hbase", "hive", "hdfs", "kafka", "spark", "mapreduce"}
+	servicesStr = os.Getenv("OCDP_SERVICES_LIST")
+	services := strings.Split(strings.Replace(servicesStr, " ", "", -1), ",")
 	hadoop := &Hadoop{BaseURL: hadoopBaseURL}
 	register("hadoop", services, hadoop)
 

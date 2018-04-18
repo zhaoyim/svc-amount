@@ -21,9 +21,9 @@ type svcAmountList struct {
 func DoomServiceInstance(r *http.Request, bsi *BackingServiceInstance) (*svcAmountList, error) {
 	bsname := bsi.Spec.BackingServiceName
 	clog.Debug("service:", bsname)
-	// for k, v := range bsi.Spec.Creds {
-	// 	println("###", k, v)
-	// }
+//	 for k, v := range bsi.Spec.Creds {
+//	 	println("###", k, v)
+//	 }
 
 	agent, err := findDriver(bsname)
 	if err != nil {
