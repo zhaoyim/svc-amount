@@ -92,7 +92,7 @@ type yarnQueue struct {
 // since queue is start with root., we remove root. prefix by using queue[5:]
 
 func (yarn *yarnQueue) URI() (uri string, err error) {
-	queue, ok := yarn.cred["Yarn Queue"]
+	queue, ok := yarn.cred["Yarn_Queue"]
 	if !ok {
 		return "", fmt.Errorf("Yarn Queue value is empty.")
 	}
@@ -106,7 +106,7 @@ type hdfsPath struct {
 }
 
 func (hdfs *hdfsPath) URI() (uri string, err error) {
-	path, ok := hdfs.cred["HDFS Path"]
+	path, ok := hdfs.cred["HDFS_Path"]
 	if !ok {
 		return "", fmt.Errorf("HDFS Path value is empty")
 	}
@@ -134,7 +134,7 @@ type hiveDB struct {
 }
 
 func (hive *hiveDB) URI() (uri string, err error) {
-	credStr, ok := hive.cred["Hive database"]
+	credStr, ok := hive.cred["Hive_Database"]
 	if !ok {
 		return "", fmt.Errorf("%v Hive database value is empty", hive.svc)
 	}
@@ -158,7 +158,7 @@ type hbaseNS struct {
 }
 
 func (hbase *hbaseNS) URI() (uri string, err error) {
-	ns, ok := hbase.cred["HBase NameSpace"]
+	ns, ok := hbase.cred["HBase_NameSpace"]
 	if !ok {
 		return "", fmt.Errorf("%v namespace is empty", hbase.svc)
 	}
