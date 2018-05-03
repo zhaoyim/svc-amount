@@ -34,23 +34,36 @@ type DataFoundryClient struct {
 	token       atomic.Value
 }
 
+// BackingService describe a service
 type BackingService struct {
 	unversioned.TypeMeta `json:",inline"`
+	// Spec defines the behavior of the BackingService
 	Spec                 BackingServiceSpec `json:"spec,omitempty" description:"spec defines the behavior of the BackingService"`
 }
 
+// BackingServiceSpec describe a service spec
 type BackingServiceSpec struct {
+	// service name
 	Name                       string `json:"name, omitempty"`
+	// service spec objects metadata
 	BackingServiceSpecMetadata `json:"metadata, omitempty"`
 }
 
+// BackingServiceSpecMetadata describe a service spec metadata
 type BackingServiceSpecMetadata struct {
+	// display name
 	DisplayName         string `json:"displayName, omitempty"`
+	// documentation Url
 	DocumentationUrl    string `json:"documentationUrl, omitempty"`
+	// image url
 	ImageUrl            string `json:"imageUrl, omitempty"`
+	// description
 	LongDescription     string `json:"longDescription, omitempty"`
+	// provider display name
 	ProviderDisplayName string `json:"providerDisplayName, omitempty"`
+	// support url
 	SupportUrl          string `json:"supportUrl, omitempty"`
+	// service type, which used to distinguish the service
 	Type                string `json:"type, omitempty"`
 }
 

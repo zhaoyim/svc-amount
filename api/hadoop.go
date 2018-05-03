@@ -197,6 +197,9 @@ func init() {
 	clog.Debug("hadoop amount base url:", hadoopBaseURL)
 
 	servicesStr = os.Getenv("OCDP_SERVICES_LIST")
+	// remove the spaces in the env service list
+	// hdfs, hbase, hive, mapreduce, spark, kafka, hdfs_cluster2, hbase_cluster2,
+	// hive_cluster2, mapreduce_cluster2, spark_cluster2, kafka_cluster2
 	services := strings.Split(strings.Replace(servicesStr, " ", "", -1), ",")
 	hadoop := &Hadoop{BaseURL: hadoopBaseURL}
 	register("hadoop", services, hadoop)
